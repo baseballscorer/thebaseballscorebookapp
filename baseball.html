@@ -1045,6 +1045,37 @@ async function sbFetch(path,opt={},auth=true){
  if(!r.ok)throw new Error((j&&(j.msg||j.message||j.error_description||j.error))||('HTTP '+r.status));
  return j}
 const cloudErr=m=>/different from the old|same password/i.test(m)?'新密碼不能和舊密碼相同':/rate limit|too many|only request this after/i.test(m)?'操作太頻繁，請稍後再試（寄信有次數限制）':/invalid login/i.test(m)?'帳號或密碼錯誤':/already registered|already exists/i.test(m)?'這個 Email 已註冊過，請改按「登入」':/at least 6/i.test(m)?'密碼至少要 6 碼':/valid email|invalid.*email/i.test(m)?'Email 格式不正確':/failed to fetch|networkerror|load failed/i.test(m)?'連不上網路':m;
+
+/* --- 備援專案（第二個 Supabase，雙寫鏡像；SB2 留空則不啟用） --- */
+const SB2={url:'https://fraevglucggxprdyqqwr.supabase.co',key:'sb_publishable_6yB9lSpezohsKIvnE5LaWg_fCQpt221'};
+let AU2=jget('bb_auth2');const MIR={last:null,sh:{},msg:''};
+const on2=()=>!!(SB2.url&&SB2.key);
+const setAuth2=j=>{AU2={access_token:j.access_token,refresh_token:j.refresh_token,expires_at:j.expires_at||Math.floor(Date.now()/1000)+(j.expires_in||3600),email:(j.user&&j.user.email)||(AU2&&AU2.email)||''};jset('bb_auth2',AU2)};
+const uidOf2=()=>{try{return JSON.parse(atob(AU2.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).sub}catch(e){return ''}};
+async function sb2Fetch(path,opt={},auth=true){
+ const h={apikey:SB2.key,'Content-Type':'application/json',...(opt.headers||{})};
+ if(auth&&AU2){
+  if(AU2.expires_at-60<=Date.now()/1000){try{const j=await sb2Fetch('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:JSON.stringify({refresh_token:AU2.refresh_token})},false);setAuth2(j)}catch(e){if(/invalid|expired|not found|revoked/i.test(e.message)){AU2=null;jset('bb_auth2',null)}}}
+  if(AU2)h.Authorization='Bearer '+AU2.access_token}
+ const r=await fetch(SB2.url+path,{...opt,headers:h}),tx=await r.text();let j=null;try{j=tx?JSON.parse(tx):null}catch(e){}
+ if(!r.ok)throw new Error((j&&(j.msg||j.message||j.error_description||j.error))||('HTTP '+r.status));
+ return j}
+async function sb2Login(em,pw){
+ if(!on2())return;
+ try{let j;
+  try{j=await sb2Fetch('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:em,password:pw})},false)}
+  catch(e){if(!/invalid login/i.test(e.message))throw e;j=await sb2Fetch('/auth/v1/signup',{method:'POST',body:JSON.stringify({email:em,password:pw})},false)}
+  if(j&&j.access_token){setAuth2(j);AU2.email=em;jset('bb_auth2',AU2);MIR.msg='';MIR.last=null;MIR.sh={}}
+  else MIR.msg='備援專案帳號已建立，但需要先到信箱點確認信（或到該專案後台關閉 Confirm email）'}
+ catch(e){MIR.msg='備援專案登入失敗：'+cloudErr(e.message)}}
+async function mirrorPush(){
+ if(!on2()||!AU2||VIEW||!navigator.onLine)return;
+ try{const s=JSON.stringify(S);if(s!==MIR.last){await sb2Fetch('/rest/v1/user_state?on_conflict=owner',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:JSON.stringify({owner:uidOf2(),data:JSON.parse(s),updated_at:new Date().toISOString()})});MIR.last=s}MIR.msg=''}
+ catch(e){MIR.msg='備援專案同步失敗：'+cloudErr(e.message)}}
+async function mirrorShare(gid,id,data,str){
+ if(!on2()||!AU2)return;
+ try{await sb2Fetch('/rest/v1/shares?on_conflict=owner,game_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:JSON.stringify({id,owner:uidOf2(),game_id:gid,data,updated_at:new Date().toISOString()})});MIR.sh[gid]=str;MIR.msg=''}
+ catch(e){MIR.msg='備援專案分享更新失敗：'+cloudErr(e.message)}}
 /* --- 資料同步 --- */
 function cloudDirty(s){
  if(!AU||VIEW||s===CL.last)return;
@@ -1059,7 +1090,7 @@ async function cloudPush(){
  CL.busy=false;
  if(ok&&JSON.stringify(S)!==CL.last){clearTimeout(CL.t);CL.t=setTimeout(cloudTick,2500)}
  return ok}
-const cloudTick=async()=>{await cloudPush();await shareSync();if(V.cl)R()};
+const cloudTick=async()=>{await cloudPush();await mirrorPush();await shareSync();if(V.cl)R()};
 function applyCloud(row){
  S=row.data&&row.data.teams?row.data:{teams:[],games:[]};
  try{localStorage.setItem('bb',JSON.stringify(S))}catch(e){}
@@ -1075,17 +1106,19 @@ async function cloudSync(){
   else{V.cc={row};R()}
  }catch(e){CL.msg='同步失敗：'+cloudErr(e.message)}
  if(V.cl)R()}
-async function cloudNow(){CL.msg='同步中…';R();await cloudSync();if(!V.cc&&AU&&SNC.dirty)await cloudPush();await shareSync();if(CL.msg==='同步中…')CL.msg='已是最新';R()}
+async function cloudNow(){CL.msg='同步中…';R();await cloudSync();if(!V.cc&&AU&&SNC.dirty)await cloudPush();await mirrorPush();await shareSync();if(CL.msg==='同步中…')CL.msg='已是最新';R()}
 async function cloudIn(kind){
  const em=($('cle').value||'').trim(),pw=$('clp').value||'';V.cle=em;
  if(!em||!pw){CL.msg='請輸入 Email 和密碼';return R()}
  try{
   const j=await sbFetch(kind=='login'?'/auth/v1/token?grant_type=password':'/auth/v1/signup',{method:'POST',body:JSON.stringify({email:em,password:pw})},false);
   if(!j||!j.access_token){CL.msg='帳號已建立，但需要先到信箱點確認信才能登入（也可以到 Supabase 後台把 Confirm email 關掉）。';return R()}
-  setAuth(j);AU.email=em;jset('bb_auth',AU);CL.last=JSON.stringify(S);SNC={ts:null,dirty:false};jset('bb_sync',SNC);CL.msg='登入成功，同步中…';R();await cloudSync();if(CL.msg==='登入成功，同步中…')CL.msg='登入成功';R()
+  setAuth(j);AU.email=em;jset('bb_auth',AU);await sb2Login(em,pw);CL.last=JSON.stringify(S);SNC={ts:null,dirty:false};jset('bb_sync',SNC);CL.msg='登入成功，同步中…';R();await cloudSync();await mirrorPush();if(CL.msg==='登入成功，同步中…')CL.msg='登入成功';R()
  }catch(e){CL.msg=cloudErr(e.message);R()}}
 async function cloudOut(){
  try{await sbFetch('/auth/v1/logout',{method:'POST'})}catch(e){}
+ if(AU2)try{await sb2Fetch('/auth/v1/logout',{method:'POST'})}catch(e){}
+ AU2=null;jset('bb_auth2',null);MIR.last=null;MIR.sh={};MIR.msg='';
  AU=null;jset('bb_auth',null);SNC={ts:null,dirty:false};jset('bb_sync',SNC);CL.last=null;CL.sh={};CL.msg='已登出（本機上的資料還在）';R()}
 const useCloud=()=>applyCloud(V.cc.row);
 function mergeData(L,C){
@@ -1109,7 +1142,7 @@ async function useMerge(){
 async function useLocal(){SNC.ts=V.cc.row.updated_at;V.cc=null;SNC.dirty=true;await cloudPush();R()}
 function cloudModal(){
  if(V.cc){const r=V.cc.row,d=r.data||{};return `<div class=mo><div class=md><b>雲端和本機的資料不一樣</b><div class=row style="font-size:12px;opacity:.8">雲端：${(d.games||[]).length} 場比賽、${(d.teams||[]).length} 支球隊（${new Date(r.updated_at).toLocaleString()}）<br>本機：${S.games.length} 場比賽、${S.teams.length} 支球隊</div><div class=row>${btn('合併兩邊（保留兩邊新增的）','useMerge()','pri')}</div><div class=row style="font-size:12px;opacity:.7">合併不會處理刪除：一邊刪掉的，另一邊還有的會被補回來。</div><div class=row>${btn('使用雲端資料（覆蓋本機）','useCloud()')}</div><div class=row>${btn('使用本機資料（覆蓋雲端）','useLocal()')}</div><div class=row>${btn('先不處理','V.cc=null;R()')}</div></div></div>`}
- const st=CL.msg?`<div class=row style="font-size:12px;opacity:.85">${CL.msg}</div>`:'';
+ const st=(CL.msg?`<div class=row style="font-size:12px;opacity:.85">${CL.msg}</div>`:'')+(on2()?`<div class=row style="font-size:12px;opacity:.85">${MIR.msg||(AU2?'備援專案：已連線':(AU?'備援專案：未登入（請重新登入一次）':''))}</div>`:'');
  if(AU)return `<div class=mo onclick="V.cl=false;R()"><div class=md onclick="event.stopPropagation()"><b>☁️ 雲端同步</b><div class=row>已登入：${AU.email||''}</div>${st}${SNC.ts?`<div class=row style="font-size:12px;opacity:.7">上次同步：${new Date(SNC.ts).toLocaleString()}${SNC.dirty?'（有尚未上傳的變更）':''}</div>`:''}<div class=row>${btn('立即同步','cloudNow()','pri')}${btn('修改密碼',"V.pw={};V.pwm=null;R()")}${btn('登出','cloudOut()')}</div><div class=row style="justify-content:flex-end">${btn('關閉','V.cl=false;R()')}</div></div></div>`;
  return `<div class=mo onclick="V.cl=false;R()"><div class=md onclick="event.stopPropagation()"><b>☁️ 登入雲端</b><div class=row style="font-size:12px;opacity:.8">登入後資料會自動同步到雲端，換裝置登入就能取回。沒登入也能照常離線使用。</div><div class=row><input id=cle type=email placeholder="Email" value="${V.cle||''}" style="flex:1" autocomplete="email"></div><div class=row><input id=clp type=password placeholder="密碼（至少 6 碼）" style="flex:1" autocomplete="current-password"></div>${st}<div class=row>${btn('登入',"cloudIn('login')",'pri')}${btn('註冊新帳號',"cloudIn('signup')")}</div><div class=row>${btn('忘記密碼',"cloudForgot()")}</div><div class=row style="justify-content:flex-end">${btn('關閉','V.cl=false;R()')}</div></div></div>`}
 /* --- 忘記密碼／修改密碼 --- */
@@ -1123,7 +1156,7 @@ async function pwSave(){
  const a=$('pw1').value,b=$('pw2').value;
  if(a.length<6){V.pwm='密碼至少要 6 碼';return R()}
  if(a!==b){V.pwm='兩次輸入的密碼不一致';return R()}
- try{await sbFetch('/auth/v1/user',{method:'PUT',body:JSON.stringify({password:a})});V.pw=null;V.pwm=null;CL.msg='密碼已更新';V.cl=true;R();cloudSync()}
+ try{await sbFetch('/auth/v1/user',{method:'PUT',body:JSON.stringify({password:a})});if(AU2)try{await sb2Fetch('/auth/v1/user',{method:'PUT',body:JSON.stringify({password:a})})}catch(e){MIR.msg='備援專案密碼更新失敗：'+cloudErr(e.message)}V.pw=null;V.pwm=null;CL.msg='密碼已更新';V.cl=true;R();cloudSync()}
  catch(e){V.pwm=cloudErr(e.message);R()}}
 async function cloudHash(){
  const h=location.hash.replace(/^#/,'');if(!h||!/access_token|error/.test(h))return;
@@ -1142,14 +1175,14 @@ const snapKey=k=>{if(k.startsWith('team:'))return snapTeam(k.slice(5));const g=S
 async function sharePush(gid){
  const data=snapKey(gid);if(!data)return null;const str=JSON.stringify(data);
  const j=await sbFetch('/rest/v1/shares?on_conflict=owner,game_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify({owner:uidOf(),game_id:gid,data,updated_at:new Date().toISOString()})});
- CL.sh[gid]=str;return j[0].id}
+ CL.sh[gid]=str;await mirrorShare(gid,j[0].id,data,str);return j[0].id}
 async function shareSync(){
  if(!AU||VIEW||!S.sh||!navigator.onLine)return;
- for(const gid of Object.keys(S.sh)){const d=snapKey(gid);if(!d||JSON.stringify(d)===CL.sh[gid])continue;try{await sharePush(gid)}catch(e){CL.msg='分享更新失敗：'+cloudErr(e.message)}}}
+ for(const gid of Object.keys(S.sh)){const d=snapKey(gid);if(!d)continue;const str=JSON.stringify(d);if(str===CL.sh[gid]){if(on2()&&AU2&&MIR.sh[gid]!==str&&S.sh[gid])await mirrorShare(gid,S.sh[gid],d,str);continue}try{await sharePush(gid)}catch(e){CL.msg='分享更新失敗：'+cloudErr(e.message)}}}
 async function shareCreate(gid){
  try{const id=await sharePush(gid);S.sh=S.sh||{};S.sh[gid]=id;V.smm=null;save()}catch(e){V.smm='建立失敗：'+cloudErr(e.message)}R()}
 async function shareStop(gid){
- try{await sbFetch('/rest/v1/shares?owner=eq.'+uidOf()+'&game_id=eq.'+encodeURIComponent(gid),{method:'DELETE'});delete S.sh[gid];delete CL.sh[gid];V.smm=null;save()}catch(e){V.smm='停止失敗：'+cloudErr(e.message)}R()}
+ try{await sbFetch('/rest/v1/shares?owner=eq.'+uidOf()+'&game_id=eq.'+encodeURIComponent(gid),{method:'DELETE'});if(on2()&&AU2)try{await sb2Fetch('/rest/v1/shares?owner=eq.'+uidOf2()+'&game_id=eq.'+encodeURIComponent(gid),{method:'DELETE'})}catch(e){}delete S.sh[gid];delete CL.sh[gid];V.smm=null;save()}catch(e){V.smm='停止失敗：'+cloudErr(e.message)}R()}
 function copyShare(){
  const el=$('shl'),v=el&&el.value;const done=()=>{V.toast='已複製連結';R();setTimeout(()=>{V.toast=null;R()},1500)};
  try{navigator.clipboard.writeText(v).then(done,()=>{el.select()})}catch(e){el&&el.select()}}
@@ -1172,12 +1205,14 @@ function vBoard(g,o){
  <div class=c><div style="text-align:center"><b>本打席逐球</b></div><div class=sy>${o.cur.filter(x=>x.p).map(x=>PIC(x.k)||SY[x.k]||'').join('')}</div><div class=lgd>${[['B','壞球'],['S','好球'],['W','揮空'],['F','界外']].map(([k,t])=>`<span class=lgi>${PIC(k,14)}<span>${t}</span></span>`).join('')}</div></div></div>`}
 async function vFetch(){
  V.vl=Date.now();
- try{const j=await sbFetch('/rest/v1/rpc/get_share',{method:'POST',body:JSON.stringify({share_id:VIEW})},false);
+ try{let j=null,er=null;try{j=await sbFetch('/rest/v1/rpc/get_share',{method:'POST',body:JSON.stringify({share_id:VIEW})},false)}catch(e){er=e}
+  if((!j||!j.data)&&on2()){try{j=await sb2Fetch('/rest/v1/rpc/get_share',{method:'POST',body:JSON.stringify({share_id:VIEW})},false)||j}catch(e){}}
+  if(er&&!(j&&j.data))throw er;
   if(!j||!j.data){V.verr='找不到這場比賽，或分享已經停止。';S.games=[];V.gid=null;return R()}
   if(j.data.kind=='team'){const d=j.data;S.teams=d.teams||[];S.games=d.games||[];S.dr=d.dr?{[d.tid]:d.dr}:{};S.cfg=d.cfg||{};V.tid=d.tid;V.vk='team';V.gid=null;V.vt=new Date(j.updated_at).toLocaleTimeString();V.verr=null;return R()}V.vk=null;S.teams=j.data.teams||[];S.games=[j.data.game];V.gid=j.data.game.id;V.vt=new Date(j.updated_at).toLocaleTimeString();V.verr=null;R()
  }catch(e){if(!V.gid)V.verr='載入失敗：'+cloudErr(e.message);R()}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&AU&&!VIEW)cloudSync()});
 window.addEventListener('online',()=>{if(AU&&!VIEW)cloudSync().then(shareSync)});
 
-if(VIEW){V.sub='rec';vFetch();setInterval(()=>{if(!document.hidden&&Date.now()-(V.vl||0)>=(V.vk=='team'?600000:9000))vFetch()},5000)}else{S.games.forEach(healSides);R();cloudHash().then(()=>{if(AU)cloudSync().then(shareSync)})}
+if(VIEW){V.sub='rec';vFetch();setInterval(()=>{if(!document.hidden&&Date.now()-(V.vl||0)>=(V.vk=='team'?600000:9000))vFetch()},5000)}else{S.games.forEach(healSides);R();cloudHash().then(()=>{if(AU)cloudSync().then(mirrorPush).then(shareSync)})}
 </script></body></html>
