@@ -778,6 +778,7 @@ function agg(tid,rng,upto){const t=T(tid),r={bat:{},df:{},pt:{}},ui=upto?S.games
    const q=o.pt[id];if(q){const a=r.pt[id];a.G++;['outs','P','S','B','K','BB','IBB','HBP','H','HR','WP','BK','R','ER','BF','AB','GS','REL','SV','HLD','XBH'].forEach(k=>a[k]=(a[k]||0)+(q[k]||0));if(g.fin||o.over){if(q.W)a.W++;else if(q.L)a.L++;else a.ND++}}})});
  r.teamG=teamG;
  return r}
+const togOp=k=>{const q='.sc,.scv,.scb',st=[...document.querySelectorAll(q)].map(e=>[e.scrollLeft,e.scrollTop]),y=window.scrollY;V.op[k]=!V.op[k];R();document.querySelectorAll(q).forEach((e,i)=>{if(st[i]){e.scrollLeft=st[i][0];e.scrollTop=st[i][1]}});window.scrollTo(0,y)};
 const togCol=(tab,k)=>{S.cfg=S.cfg||{};S.cfg[tab]=S.cfg[tab]||{};S.cfg[tab][k]=S.cfg[tab][k]===false;R()};
 
 (()=>{let d=null,moved=false;
@@ -813,10 +814,10 @@ function teamStatsDF(t,A){const cols=COLS.df,on=k=>!(S.cfg&&S.cfg.df&&S.cfg.df[k
   const posEntries=Object.entries(A.df[p.id].pos).sort((a,b)=>(b[1].PO+b[1].A+b[1].E)-(a[1].PO+a[1].A+a[1].E));
   const key='team:df:'+t.id+':'+p.id,open=!!V.op[key];
   if(!posEntries.length){rows.push(`<tr><td style="${stk(0,60)}">${pn(p.id)}</td><td style="${stk(60,30)}">-</td><td style="${stk(90,20)}"></td>${vis.map(c=>`<td>${c[2]({G:A.df[p.id].G,PO:0,A:0,E:0,DP:0,TP:0,PB:0,CS:0,SBA:0},p)}</td>`).join('')}</tr>`);return}
-  if(posEntries.length>1&&!open){const tog=`<span class=tog onclick="V.op['${key}']=!V.op['${key}'];R()">∨</span>`,so=tot(p.id);
+  if(posEntries.length>1&&!open){const tog=`<span class=tog onclick="togOp('${key}')">∨</span>`,so=tot(p.id);
    rows.push(`<tr><td style="${stk(0,60)}">${pn(p.id)}</td><td style="${stk(60,30)}">${POSE[p.pos]||''}</td><td style="${stk(90,20)}">${tog}</td>${vis.map(c=>`<td>${c[2](so,p)}</td>`).join('')}</tr>`);return}
   const shown=posEntries;
-  shown.forEach(([posEng,st],i)=>{const last=i==shown.length-1,tog=(last&&posEntries.length>1)?`<span class=tog onclick="V.op['${key}']=!V.op['${key}'];R()">${open?'∧':'∨'}</span>`:'';
+  shown.forEach(([posEng,st],i)=>{const last=i==shown.length-1,tog=(last&&posEntries.length>1)?`<span class=tog onclick="togOp('${key}')">${open?'∧':'∨'}</span>`:'';
    const so={G:A.df[p.id].G,...st};
    rows.push(`<tr><td style="${stk(0,60)}">${i==0?pn(p.id):''}</td><td style="${stk(60,30)}">${posEng}</td><td style="${stk(90,20)}">${tog}</td>${vis.map(c=>`<td>${c[2](so,p)}</td>`).join('')}</tr>`)})
  });
