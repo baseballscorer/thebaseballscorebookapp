@@ -1,6 +1,6 @@
 {
-  "name": "棒球記錄",
-  "short_name": "棒球記錄",
+  "name": "棒球團隊及比賽數據記錄本",
+  "short_name": "棒球記錄本",
   "description": "離線棒球比賽逐球紀錄與成績統計工具",
   "start_url": "./baseball.html",
   "scope": "./",
