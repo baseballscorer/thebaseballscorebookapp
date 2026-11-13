@@ -857,12 +857,12 @@ function teamTeamData(t){const A=agg(t.id,(S.dr&&S.dr[t.id])||null),G=A.teamG||0
   ['投球',[['出賽數',pt.G],['局數',Math.floor(pt.outs/3)+'.'+pt.outs%3],['面對打席',pt.BF],['投球數',pt.P],['被安打',pt.H],['被長打',pt.XBH],['四死球',pt.BB+pt.HBP],['奪三振',pt.K],['暴投',pt.WP],['犯規',pt.BK],['失分',pt.R],['自責分',pt.ER],['ERA',f2(pt.ER*27/pt.outs)],['WHIP',f2((pt.BB+pt.H)*3/pt.outs)],['BA',f3(pt.H/pt.AB)],['BABIP',f3((pt.H-pt.HR)/(pt.AB-pt.K-pt.HR+pt.SF))]]]];
  return T3}
 function dirChart(D,cid='dcf'){const tot=Object.values(D).reduce((a,b)=>a+b,0),col=p=>p==0?'#E6E6E6':p<10?'#FFF4C2':p<20?'#FFE08A':p<30?'#FFC266':p<40?'#FF9F4D':p<50?'#F2693D':'#D93A2B',dk=p=>p>=40,pc=k=>tot?(D[k]||0)*100/tot:0,tx=p=>p==0?'0%':p<1?p.toFixed(1)+'%':Math.round(p)+'%',f=k=>col(pc(k));
- const arc='A543 543 0 0 1 980 363',inA='A364.2 364.2 0 0 1',Y=431.6;
+ const arc='A543 543 0 0 1 980 363',inA='A364.2 364.2 0 0 1',Y=431.6,Yd=397.8;
  const lab=(k,x,y,fs=44)=>`<text x=${x} y=${y} text-anchor=middle dominant-baseline=central font-size=${fs} fill="${dk(pc(k))?'#fff':'#222'}">${tx(pc(k))}</text>`;
  return `<svg viewBox="-2 -2 988 907" style="width:100%;display:block"><defs><clipPath id=${cid}><path d="M4 363 ${arc} L532 823 L452 823 Z"/></clipPath></defs>
 <g stroke-linejoin=round>
-<polygon fill="${f('h7')}" points="0,0 180,0 282,${Y} 0,${Y}"/><polygon fill="${f('h8')}" points="180,0 804,0 702,${Y} 282,${Y}"/><polygon fill="${f('h9')}" points="804,0 984,0 984,${Y} 702,${Y}"/>
-<g clip-path="url(#${cid})"><polygon fill="${f(7)}" points="0,0 180,0 282,${Y} 340,900 0,900"/><polygon fill="${f(8)}" points="180,0 804,0 702,${Y} 282,${Y}"/><polygon fill="${f(9)}" points="804,0 984,0 984,900 644,900 702,${Y}"/></g>
+<polygon fill="${f('h7')}" points="0,0 180,0 341,${Yd} 0,${Yd}"/><polygon fill="${f('h8')}" points="180,0 804,0 643,${Yd} 341,${Yd}"/><polygon fill="${f('h9')}" points="804,0 984,0 984,${Yd} 643,${Yd}"/>
+<g clip-path="url(#${cid})"><polygon fill="${f(7)}" points="0,0 180,0 341,${Yd} 340,900 0,900"/><polygon fill="${f(8)}" points="180,0 804,0 643,${Yd} 341,${Yd}"/><polygon fill="${f(9)}" points="804,0 984,0 984,900 644,900 643,${Yd}"/></g>
 <path fill="${f(5)}" stroke="${f(5)}" d="M179 543 ${inA} 282 ${Y} L387 596 L467 721 L355 723 Z"/>
 <path fill="${f(6)}" stroke="${f(6)}" d="M282 ${Y} ${inA} 492 365 L492 541 L387 596 Z"/>
 <path fill="${f(4)}" stroke="${f(4)}" d="M492 365 ${inA} 702 ${Y} L597 596 L492 541 Z"/>
@@ -871,7 +871,7 @@ function dirChart(D,cid='dcf'){const tot=Object.values(D).reduce((a,b)=>a+b,0),c
 <polygon fill="${f(2)}" stroke="${f(2)}" points="355,723 629,723 532,823 452,823"/>
 <polygon fill="${f('L')}" points="0,363 4,363 355,723 0,903"/><polygon fill="${f('R')}" points="984,363 980,363 629,723 984,903"/><polygon fill="${f('B')}" points="355,723 629,723 984,903 0,903"/>
 </g>
-<g stroke="#bbb" stroke-width=3 fill=none><path d="M180 0L282 ${Y}M804 0L702 ${Y}M179 543 ${inA} 805 543M492 365V541M282 ${Y}L387 596M702 ${Y}L597 596M492 541L387 596M492 541L597 596M387 596L467 721M597 596L517 721M355 723H629M355 723L0 903M629 723L984 903"/></g>
+<g stroke="#bbb" stroke-width=3 fill=none><path d="M180 0L341 ${Yd}M804 0L643 ${Yd}M179 543 ${inA} 805 543M492 365V541M282 ${Y}L387 596M702 ${Y}L597 596M492 541L387 596M492 541L597 596M387 596L467 721M597 596L517 721M355 723H629M355 723L0 903M629 723L984 903"/></g>
 <g stroke="#222" stroke-width=5 fill=none stroke-linejoin=round><path d="M4 363 ${arc} L532 823 L452 823 Z"/><rect x=0 y=0 width=984 height=903 stroke-width=4 rx=6 /></g>
 ${lab('h7',102,128)}${lab('h8',492,28,36)}${lab('h9',882,128)}${lab(7,182,348)}${lab(8,492,198)}${lab(9,802,348)}${lab(6,412,458)}${lab(4,572,458)}${lab(5,317,593)}${lab(3,667,593)}${lab(1,492,633)}${lab(2,492,771)}${lab('L',112,598)}${lab('R',872,598)}${lab('B',492,865)}</svg><div class=lg2 style="text-align:center">${tot?`共 ${tot} 個擊球`:'尚無擊球方向資料'}</div>`}
 function teamTeam(t){const T3=teamTeamData(t),DC=`<div style="margin:12px 4px 0"><b style="display:block;text-align:center;margin-bottom:6px">擊球分佈</b>${dirChart(LASTDIR)}</div><div style="margin:16px 4px 0"><b style="display:block;text-align:center;margin-bottom:6px">被擊球分佈</b>${dirChart(LASTDIRP,'dcg')}</div>`;
