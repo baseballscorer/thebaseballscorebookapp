@@ -1580,5 +1580,5 @@ async function vFetch(){
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&AU&&!VIEW)cloudSync()});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&VIEW&&typeof vFetch=='function')vFetch()});
 window.addEventListener('online',()=>{if(AU&&!VIEW)cloudSync().then(shareSync)});
 
-if(VIEW){V.sub='rec';vFetch();setInterval(()=>{if(!document.hidden&&Date.now()-(V.vl||0)>=(V.vk=='team'?30000:9000))vFetch()},5000)}else{S.games.forEach(healSides);R();cloudHash().then(()=>{if(AU)cloudSync().then(mirrorPush).then(shareSync)})}
+if(VIEW){V.sub='rec';vFetch();setInterval(()=>{if(!document.hidden&&Date.now()-(V.vl||0)>=(V.vk=='team'?30000:4500))vFetch()},5000)}else{S.games.forEach(healSides);R();cloudHash().then(()=>{if(AU)cloudSync().then(mirrorPush).then(shareSync)})}
 </script></body></html>
