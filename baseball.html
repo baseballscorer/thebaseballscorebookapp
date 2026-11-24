@@ -569,7 +569,7 @@ const cloudLink=()=>`<span class=tin role=button aria-label="登入帳號" style
 const tinI=o=>`<span class=tin><img class="tmi ilt" src="${o.l}"><img class="tmi idk" src="${o.d}"></span>`;
 const GTIP=(()=>{const h=t=>`<div><b class=hl>${t}</b></div>`,d=t=>`<div>${t}</div>`,sp='<div>&nbsp;</div>',pdf='<div style="color:#888;font-size:11px">可點擊📄輸出為PDF檔</div>';return{
  lu:h('出賽名單')+d('輸入球員背號或名稱關鍵字')+d('確認先發球員及守備位子')+d('方法1：點擊欄位下方跳出之球員方塊')+d('方法2：按enter鍵確認')+d('（一般球隊：僅在篩選出唯一符合者時適用）')+d('（臨時球隊：可任意設定球員名稱後按確認）')+d('臨時球隊或尚未新增球員的球隊，按隊名行右側的'+tinI(IMPI)+'，可以一鍵產生先發陣容。')+d('已在球隊頁儲存預設先發的一般球隊，同位置的'+tinI(IMPI)+'則是匯入預設打線。')+sp+d('勾選下方不在先發名單中的選手，可以登錄為該場比賽之候補選手，未勾選則無法在比賽中上場。臨時球隊要設定候補選手，須在此先新增球員後再點選。')+d('臨時球隊在此介面按下新增球隊後，即可在球隊介面查看球隊資訊及數據。'),
- bx:h('賽況簡報')+d('簡記各局各打席結果。點擊球隊名稱右邊的鉛筆圖示，可以自行修改表格內容。')+d('粗體字表示該打席有任意形式的得分進帳。')+sp+pdf,
+ bx:h('賽況簡報')+d('簡記各局各打席結果。點擊球隊名稱右邊的鉛筆圖示，可以自行修改表格內容；文字前加 * 為粗體。')+d('粗體字表示該打席有任意形式的得分進帳。')+sp+pdf,
  rec:h('比賽紀錄'),
  log:h('逐打席紀錄')+d('以文字逐球紀錄比賽發展。')+d('長按該打席空白區域，可以自行修改標題結果和文字內容。')+sp+pdf,
  st:h('比賽數據')+d('紀錄兩隊選手在本場比賽的數據表現。')+d('點擊🔧按鈕可以自行修改選手的數據。')+sp+pdf}})();
@@ -1219,9 +1219,9 @@ function boxTable(g,o,np){const n=Math.max(g.inn||9,o.in),ro=!!(VIEW||np);
    const current=o.lu[s][slot];if(current&&!seen.includes(current))seen.push(current);
    seen.forEach((pid,pi)=>{
     const key=slot+'|'+pid,ov=((g.bxOvr||{})[s]||{})[key]||{},ed=!ro&&V.bxe==s;
-    const cells=[...Array(n)].map((_,j)=>{const hit=entries.filter(e=>e.pid==pid&&e.in==j+1),dt=hit.map(x=>x.code).join(' '),oc=ov.c&&ov.c[j+1];
+    const cells=[...Array(n)].map((_,j)=>{const hit=entries.filter(e=>e.pid==pid&&e.in==j+1),dt=hit.map(x=>(x.runs?'*':'')+x.code).join(' '),oc=ov.c&&ov.c[j+1];
      if(ed)return `<input data-bx="${key}|${j+1}" data-def="${escA(dt)}" value="${escA(oc!==undefined?oc:dt)}" style="width:3.6em;font-size:12px;padding:2px;min-height:0;box-sizing:border-box">`;
-     if(oc!==undefined){const rs=new Set(hit.filter(x=>x.runs).map(x=>x.code));return oc.split(/\s+/).filter(Boolean).map(c=>`<span class=bxr style="${rs.has(c)?'font-weight:700':''}">${escA(c)}</span>`).join('')}
+     if(oc!==undefined)return oc.split(/\s+/).filter(Boolean).map(c=>{const b=c[0]=='*'||c[0]=='＊';return `<span class=bxr style="${b?'font-weight:700':''}">${escA(b?c.slice(1):c)}</span>`}).join('')
      return hit.length?hit.map(x=>`<span class=bxr style="${x.runs?'font-weight:700':''}">${x.code}</span>`).join(''):''});
     const stH=(o.hist[s][slot]||[]).find(h=>h.pid==pid),posTxt=stH&&stH.positions.length?[stH.tag=='DEF'?`(${stH.positions[0]})`:(stH.tag?`(${stH.tag})`:stH.positions[0]),...(stH.ph?['(PH)']:[]),...stH.positions.slice(1).map(p=>`(${p})`)].filter(Boolean).join('<br>'):(POSE[o.pos[s][slot]]||'');
     const dp=posTxt.replace(/<br>/g,' '),pcell=ed?`<input data-bxp="${key}" data-def="${escA(dp)}" value="${escA(ov.pos!==undefined?ov.pos:dp)}" style="width:3.4em;font-size:12px;padding:2px;min-height:0;box-sizing:border-box">`:(ov.pos!==undefined?escA(ov.pos):posTxt);
@@ -1229,7 +1229,7 @@ function boxTable(g,o,np){const n=Math.max(g.inn||9,o.in),ro=!!(VIEW||np);
    })
   }
   const ctl=ro?'':(V.bxe==s?`<span style="margin-left:auto;display:flex;gap:6px;font-weight:400">${btn('儲存',`bxSave('${s}')`,'pri')}${btn('還原',`bxReset('${s}')`)}${btn('取消',"V.bxe=null;R()")}</span>`:`<button class=b style="margin-left:auto;background:transparent;border-color:transparent;box-shadow:none;padding:2px 6px;min-height:0" aria-label="修改" onclick="V.bxe='${s}';R()">${tmImg(PENI.l,PENI.d)}</button>`);
-  return `<div class=c><h3 style="display:flex;align-items:center;gap:6px">${t.name}${ctl}</h3><div class="sc scv scb"><table class=boxtb><tr><th style="${stk(0,22)}"></th><th style="${stk(22,60)}">球員</th><th style="${stk(82,34)}">守位</th>${[...Array(n)].map((_,j)=>`<th>${j+1}</th>`).join('')}</tr>${rows.join('')}</table></div></div>`}).join('')}
+  return `<div class=c><h3 style="display:flex;align-items:center;gap:6px">${t.name}${ctl}</h3>${!ro&&V.bxe==s?'<div class=lg2 style="margin:2px 0 6px">編輯時文字前面加 * 表示有得分（粗體）。</div>':''}<div class="sc scv scb"><table class=boxtb><tr><th style="${stk(0,22)}"></th><th style="${stk(22,60)}">球員</th><th style="${stk(82,34)}">守位</th>${[...Array(n)].map((_,j)=>`<th>${j+1}</th>`).join('')}</tr>${rows.join('')}</table></div></div>`}).join('')}
 const bxSave=s=>{const g=G();g.bxOvr=g.bxOvr||{};const o={};document.querySelectorAll('#app [data-bx],#app [data-bxp]').forEach(e=>{const v=e.value.trim(),d=e.dataset.def;if(v===d)return;if(e.dataset.bxp!=null){const k=e.dataset.bxp;(o[k]=o[k]||{}).pos=v}else{const a=e.dataset.bx.split('|'),k=a[0]+'|'+a[1],j=a[2];o[k]=o[k]||{};(o[k].c=o[k].c||{})[j]=v}});if(Object.keys(o).length)g.bxOvr[s]=o;else delete g.bxOvr[s];if(!Object.keys(g.bxOvr).length)delete g.bxOvr;V.bxe=null;save();R()},bxReset=s=>{const g=G();if(g.bxOvr){delete g.bxOvr[s];if(!Object.keys(g.bxOvr).length)delete g.bxOvr}V.bxe=null;save();R()};
 const setSP=(s,v)=>{const g=G();if(v&&usedO(g,s).has(v)){R();return}g.sp=g.sp||{};g.sp[s]=v;R()};
 const plbl=p=>[p.no,p.name].filter(Boolean).join(' '),plShow=p=>p.name||p.no||'';
